@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <title>Snake Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    #game-container {
+      width: 308px;
+      padding: 4px;
+      box-shadow: 1px 1px 2px #aaa, -1px -1px 2px #ccc;
+      border-radius: 5px;
+      position: relative;
+    }
+    canvas {
+      background-color: lightgreen;
+      border-radius: 0 0 3px 3px;
+    }
+    p {
+      color: white;
+      background-color: green;
+      padding: 5px;
+      margin: 0;
+      border-bottom: 1px double white;
+      font-family: comic sans ms, sans-serif;
+      border-radius: 3px 3px 0 0;
+      height: 40px;
+    }
+    #overlay {
+      position: absolute;
+      top: 44px;
+      left: 4px;
+      background-color: rgba(0, 0, 0, 0.5);
+      width: 300px;
+      height: 200px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 0 0 3px 3px;
+    }
+    button {
+      background-color: red;
+      font: bold 30px comic sans ms, sans-serif;
+      color: white;
+      cursor: pointer;
+      padding: 5px;
+      width: 40%;
+      border: 2px groove white;
+      box-shadow: 1px 1px 10px white inset;
+      border-radius: 5px;
+      outline: none;
+    }
+    button:active {
+      background-color: white;
+      color: red;
+      position: relative;
+      top: 2px;
+      left: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <p>Score: <span>0</span></p>
+    <canvas width="300" height="200"></canvas>
+    <div id="overlay"><button>Play</button></div>
+  </div>
+
+  <script>
+    var canvas = document.querySelector("canvas"),
+      ctx = canvas.getContext("2d"),
+      scoreView = document.querySelector("span"),
+      gameScore = 0, playing, food,
+      gameOverlay = document.querySelector("#overlay");
+
+    class Block {
+      constructor(x, y) {
+        this.x = x * 10;
+        this.y = y * 10;
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x + 5, this.y + 5, 5, 0, 2 * Math.PI);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    var snake = {
+      segments: [],
+      direction: "right",
+      draw() {
+        var head = this.segments[this.segments.length - 1];
+        this.segments.forEach(function(segment, index) {
+          if(head.x === segment.x && head.y === segment.y && index !== snake.segments.length - 1) {
+              clearInterval(playing);
+              gameOverlay.style.display = "";
+          }
+          if(index === snake.segments.length - 1) {
+            ctx.fillStyle = "red";
+          }else {
+            ctx.fillStyle = "green";
+          }
+          segment.draw();
+        });
+      },
+      move() {
+        var head = this.segments[this.segments.length - 1],
+          tail = this.segments.shift();
+
+        if(head.x === food.x && head.y === food.y) {
+          scoreView.innerHTML = gameScore += 10;
+          generateFood();
+          snake.segments.unshift(new Block(tail.x, tail.y));
+        }
+        switch(this.direction) {
+          case "left": {
+            if(head.x === 0) {
+              tail.x = 290; tail.y = head.y;
+            } else {
+              tail.x = head.x - 10; tail.y = head.y;
+            }
+          } break;
+          case "right": {
+            if(head.x === 290) {
+              tail.x = 0; tail.y = head.y;
+            } else {
+              tail.x = head.x + 10; tail.y = head.y;
+            }
+          } break;
+          case "down": {
+            if(head.y === 190) {
+              tail.x = head.x; tail.y = 0;
+            }else {
+              tail.x = head.x; tail.y = head.y + 10;
+            }
+          } break;
+          case "up": {
+            if(head.y === 0) {
+              tail.x = head.x; tail.y = 190;
+            }else {
+              tail.x = head.x; tail.y = head.y - 10;
+            }
+          } break;
+        }
+        this.segments.push(tail);
+      }
+    };
+
+    document.body.onkeyup = function(e) {
+      if(e.keyCode >= 37 && e.keyCode <= 40) {
+        switch(e.keyCode) {
+          case 37: {
+            if(snake.direction === "right") {
+              return;
+            } snake.direction = "left";
+          } break;
+          case 38: {
+            if(snake.direction === "down") {
+              return;
+            } snake.direction = "up";
+          } break;
+          case 39: {
+            if(snake.direction === "left") {
+              return;
+            } snake.direction = "right";
+          } break;
+          case 40: {
+            if(snake.direction === "up") {
+              return;
+            } snake.direction = "down";
+          } break;
+        }
+      }
+    };
+
+    function generateFood() {
+      food.x = Math.floor(Math.random() * 290);
+      food.y = Math.floor(Math.random() * 190);
+      food.x -= food.x % 10;
+      food.y -= food.y % 10;
+      snake.segments.forEach(function(segment) {
+        if(segment.x === food.x && segment.y === food.y) {
+          generateFood();
+        }
+      });
+    }
+
+    function newGame() {
+      snake.segments = [];
+      snake.direction = "right";
+      scoreView.innerHTML = gameScore = 0;
+      gameOverlay.style.display = "none";
+      food = new Block(0, 0);
+      generateFood();
+      food.draw();
+      snake.segments.push(new Block(0, 0));
+      snake.segments.push(new Block(1, 0));
+      snake.segments.push(new Block(2, 0));
+      snake.draw();
+
+      playing = setInterval(function() {
+        snake.move();
+        ctx.clearRect(0, 0, 300, 200);
+        ctx.fillStyle = "blue";
+        food.draw();
+        snake.draw();
+      }, 100);
+    }
+
+    document.querySelector("button").onclick = newGame;
+  </script>
+</body>
+</html>
